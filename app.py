@@ -1,5 +1,6 @@
 
 import sqlite3
+import os
 
 import numpy as np
 import pandas as pd
@@ -9,10 +10,8 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from statsmodels.stats.proportion import proportion_confint
 import statsmodels.api as sm
-import os
 from supabase import create_client
-import os
-from supabase import create_client
+
 
 
 # --------------------------------------------------
