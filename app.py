@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from statsmodels.stats.proportion import proportion_confint
 import statsmodels.api as sm
+import os
+from supabase import create_client
 
 
 # --------------------------------------------------
@@ -24,6 +26,119 @@ st.set_page_config(
     page_icon="📊",
     layout="wide",
 )
+
+# --------------------------------------------------
+# SUPABASE CONNECTION AND USER LOGIN
+# --------------------------------------------------
+
+@st.cache_resource
+def get_supabase_client():
+    url = os.getenv("SUPABASE_URL")
+    key = os.getenv("SUPABASE_KEY")
+
+    if not url or not key:
+        return None
+
+    return create_client(url, key)
+
+
+supabase = get_supabase_client()
+
+if supabase is None:
+    st.error(
+        "Supabase connection settings are missing. "
+        "Please check SUPABASE_URL and SUPABASE_KEY "
+        "in Render Environment Variables."
+    )
+    st.stop()
+
+if "user" not in st.session_state:
+    st.session_state.user = None
+
+if st.session_state.user is None:
+    st.title("Health Informatics — Sign In")
+
+    login_tab, register_tab = st.tabs(
+        ["Sign In", "Create Account"]
+    )
+
+    with login_tab:
+        with st.form("login_form"):
+            email = st.text_input("Email address")
+            password = st.text_input(
+                "Password", type="password"
+            )
+            login_clicked = st.form_submit_button("Sign In")
+
+        if login_clicked:
+            try:
+                result = supabase.auth.sign_in_with_password(
+                    {"email": email, "password": password}
+                )
+                st.session_state.user = result.user
+                st.rerun()
+            except Exception:
+                st.error(
+                    "Sign-in failed. Check your email and password."
+                )
+
+    with register_tab:
+        with st.form("register_form"):
+            full_name = st.text_input("Full name")
+            new_email = st.text_input("Email address")
+            new_password = st.text_input(
+                "Create password", type="password"
+            )
+            register_clicked = st.form_submit_button(
+                "Create Account"
+            )
+
+        if register_clicked:
+            if not full_name.strip():
+                st.error("Please enter your name.")
+            elif len(new_password) < 8:
+                st.error(
+                    "Use a password with at least 8 characters."
+                )
+            else:
+                try:
+                    result = supabase.auth.sign_up(
+                        {
+                            "email": new_email,
+                            "password": new_password,
+                            "options": {
+                                "data": {"full_name": full_name}
+                            },
+                        }
+                    )
+                    if result.user and not result.session:
+                        st.success(
+                            "Account created. Check your email "
+                            "to confirm your account, then sign in."
+                        )
+                    elif result.user:
+                        st.success(
+                            "Account created. You can now sign in."
+                        )
+                except Exception:
+                    st.error(
+                        "Registration failed. Check the email "
+                        "and try again."
+                    )
+
+    st.stop()
+
+st.sidebar.success(
+    f"Signed in: {st.session_state.user.email}"
+)
+
+if st.sidebar.button("Sign Out"):
+    try:
+        supabase.auth.sign_out()
+    finally:
+        st.session_state.user = None
+        st.rerun()
+
 
 st.title("🏥 MU-CHS Faculty of Public Health")
 st.subheader("Health Informatics Department")
