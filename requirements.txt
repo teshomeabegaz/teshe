@@ -1,7 +1,5 @@
 streamlit
+numpy
 pandas
-openpyxl
 scipy
-statsmodels
 matplotlib
-supabase
