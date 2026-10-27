@@ -1422,23 +1422,25 @@ with tab5:
                 placeholder="Describe the purpose of this survey",
             )
 
-            question_count = st.number_input(
-                "Number of questions",
-                min_value=1,
-                max_value=30,
-                value=3,
-                step=1,
-            )
 
-            questions = []
+question_count = st.number_input(
+    "Number of questions",
+    min_value=1,
+    max_value=100,
+    value=5,
+    step=1,
+)
 
-            for i in range(int(question_count)):
-                st.markdown(f"**Question {i + 1}**")
+questions = []
 
-                label = st.text_input(
-                    "Question text",
-                    key=f"form_question_label_{i}",
-                )
+for i in range(int(question_count)):
+    st.markdown(f"**Question {i + 1}**")
+
+    label = st.text_input(
+        "Question text",
+        key=f"form_question_label_{i}",
+    )
+
 
                 field_type = st.selectbox(
                     "Question type",
