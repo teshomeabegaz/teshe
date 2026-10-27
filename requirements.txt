@@ -1,5 +1,9 @@
 streamlit
-numpy
 pandas
+numpy
 scipy
 matplotlib
+openpyxl
+xlrd
+statsmodels
+supabase
