@@ -16,21 +16,33 @@ import statsmodels.api as sm
 # --------------------------------------------------
 
 st.set_page_config(
-    page_title="Health Informatics & Data Analysis",
+    page_title=(
+        "MU-CHS Faculty of Public Health | "
+        "Health Informatics Department | "
+        "Health Data Analysis Tool"
+    ),
     page_icon="📊",
     layout="wide",
 )
 
-st.title("🏥 Health Informatics & Data Analysis")
+st.title("🏥 MU-CHS Faculty of Public Health")
+st.subheader("Health Informatics Department")
+st.header("Health Data Analysis Tool")
+
 st.caption(
-    "A learning platform for health data management, "
-    "statistics, and clinical research."
+    "A teaching and learning platform for health data "
+    "management, statistical analysis, and clinical research."
+)
+
+st.markdown(
+    "**Developed and provided by Teshome Abegaz**"
 )
 
 st.info(
     "For educational use. Use fictional or de-identified data only. "
     "Do not upload identifiable patient information."
 )
+
 
 
 # --------------------------------------------------
