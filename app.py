@@ -1,5 +1,4 @@
 
-import sqlite3
 import os
 
 import numpy as np
@@ -258,9 +257,12 @@ def show_file_upload(key):
 # --------------------------------------------------
 
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
+# --------------------------------------------------
+# 4. APPLICATION TABS
+# --------------------------------------------------
+
+tab1, tab2, tab3, tab4 = st.tabs(
     [
-        "📊 Dashboard",
         "📁 Analyze Dataset",
         "🧮 Python Statistics",
         "📈 Statistical Tests",
@@ -270,110 +272,10 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(
 
 
 
-# --------------------------------------------------
-# TAB 1: DASHBOARD
-# --------------------------------------------------
-
-with tab1:
-    st.header("Practice Health Data Dashboard")
-
-    st.write(
-        "Register fictional practice records and explore "
-        "basic health information."
-    )
-
-    patients = get_patients()
-
-    col1, col2, col3 = st.columns(3)
-
-    col1.metric("Practice Records", len(patients))
-
-    if not patients.empty:
-        ages = pd.to_numeric(patients["age"], errors="coerce")
-        col2.metric(
-            "Average Age",
-            f"{ages.mean():.1f}" if ages.notna().any() else "N/A",
-        )
-        col3.metric(
-            "Recorded Diagnoses",
-            int(patients["diagnosis"].nunique()),
-        )
-    else:
-        col2.metric("Average Age", "N/A")
-        col3.metric("Recorded Diagnoses", 0)
-
-    st.subheader("Add a Fictional Practice Record")
-
-    with st.form("practice_patient_form"):
-        study_id = st.text_input(
-            "Study ID",
-            placeholder="Example: STUDY001",
-        )
-
-        age = st.number_input(
-            "Age",
-            min_value=0,
-            max_value=120,
-            value=30,
-            step=1,
-        )
-
-        sex = st.selectbox(
-            "Sex",
-            ["Female", "Male", "Other", "Not recorded"],
-        )
-
-        diagnosis = st.selectbox(
-            "Example diagnosis",
-            [
-                "Hypertension",
-                "Diabetes",
-                "Pneumonia",
-                "Malaria",
-                "Trauma",
-                "Other",
-            ],
-        )
-
-        submitted = st.form_submit_button("Save Practice Record")
-
-        if submitted:
-            if not study_id.strip():
-                st.error("Please enter a study ID.")
-            else:
-                save_patient(
-                    study_id.strip(),
-                    int(age),
-                    sex,
-                    diagnosis,
-                )
-                st.success("Practice record saved.")
-                st.rerun()
-
-    st.subheader("Practice Records")
-
-    patients = get_patients()
-
-    if not patients.empty:
-        st.dataframe(
-            patients.drop(columns=["created_at"]),
-            use_container_width=True,
-        )
-
-        csv_data = patients.to_csv(index=False).encode("utf-8")
-
-        st.download_button(
-            "Download Practice Records (CSV)",
-            data=csv_data,
-            file_name="practice_health_records.csv",
-            mime="text/csv",
-        )
-    else:
-        st.info("No practice records have been added yet.")
 
 
 # --------------------------------------------------
-# TAB 2: DATASET ANALYSIS
+# TAB 1: DATASET ANALYSIS
 # --------------------------------------------------
 
 with tab2:
@@ -564,10 +466,10 @@ with tab2:
 
 
 # --------------------------------------------------
-# TAB 3: PYTHON STATISTICS
+# TAB 2: PYTHON STATISTICS
 # --------------------------------------------------
 
-with tab3:
+with tab2:
     st.header("Learn Python Statistics")
 
     st.write(
@@ -624,10 +526,10 @@ with tab3:
 
 
 # --------------------------------------------------
-# TAB 4: STATISTICAL TESTS
+# TAB 3: STATISTICAL TESTS
 # --------------------------------------------------
 
-with tab4:
+with tab3:
     st.header("Statistical Tests for Health Research")
 
     st.write(
@@ -1391,14 +1293,18 @@ with tab4:
 
 
 # --------------------------------------------------
-# TAB 5: DATA COLLECTION FORMS
+# TAB 4: DATA COLLECTION FORMS
 # --------------------------------------------------
 
-with tab5:
+# --------------------------------------------------
+# TAB 4: DATA COLLECTION FORMS
+# --------------------------------------------------
+
+with tab4:
     st.header("Data Collection Forms")
 
     st.write(
-        "Create your own questionnaires and manage your forms. "
+        "Create questionnaires and manage your forms. "
         "Forms are associated with your signed-in account."
     )
 
@@ -1422,25 +1328,23 @@ with tab5:
                 placeholder="Describe the purpose of this survey",
             )
 
+            question_count = st.number_input(
+                "Number of questions",
+                min_value=1,
+                max_value=100,
+                value=5,
+                step=1,
+            )
 
-question_count = st.number_input(
-    "Number of questions",
-    min_value=1,
-    max_value=100,
-    value=5,
-    step=1,
-)
+            questions = []
 
-questions = []
+            for i in range(int(question_count)):
+                st.markdown(f"**Question {i + 1}**")
 
-for i in range(int(question_count)):
-    st.markdown(f"**Question {i + 1}**")
-
-    label = st.text_input(
-        "Question text",
-        key=f"form_question_label_{i}",
-    )
-
+                label = st.text_input(
+                    "Question text",
+                    key=f"form_question_label_{i}",
+                )
 
                 field_type = st.selectbox(
                     "Question type",
@@ -1535,6 +1439,7 @@ for i in range(int(question_count)):
 
                     if not form_result.data:
                         st.error("The form could not be saved.")
+
                     else:
                         new_form_id = form_result.data[0]["id"]
 
@@ -1544,7 +1449,9 @@ for i in range(int(question_count)):
                             options = None
 
                             if question["field_type"] in [
-                                "dropdown", "radio", "checkbox"
+                                "dropdown",
+                                "radio",
+                                "checkbox",
                             ]:
                                 options = [
                                     option.strip()
@@ -1601,12 +1508,13 @@ for i in range(int(question_count)):
                     "You have not created any forms yet. "
                     "Use the Create a Form tab to begin."
                 )
+
             else:
                 for form_item in my_forms:
                     with st.expander(form_item["title"]):
                         st.write(
-                            form_item.get("description") or
-                            "No description provided."
+                            form_item.get("description")
+                            or "No description provided."
                         )
 
                         st.write(
@@ -1634,8 +1542,10 @@ for i in range(int(question_count)):
         except Exception as error:
             st.error(
                 "Could not load your forms. Check the Supabase "
-                f"permissions and database tables. Details: {error}"
+                "permissions and database tables. Details: "
+                f"{error}"
             )
+
 
 # --------------------------------------------------
 # 5. FOOTER
