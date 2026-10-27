@@ -1394,7 +1394,7 @@ with tab4:
                         field_rows = []
 
                         for position, question in enumerate(questions):
-                            options = None
+                            options = []
 
                             if question["field_type"] in [
                                 "dropdown",
