@@ -32,7 +32,6 @@ st.set_page_config(
 # SUPABASE CONNECTION AND USER LOGIN
 # --------------------------------------------------
 
-@st.cache_resource
 def get_supabase_client():
     url = os.getenv("SUPABASE_URL")
     key = os.getenv("SUPABASE_KEY")
@@ -43,7 +42,10 @@ def get_supabase_client():
     return create_client(url, key)
 
 
-supabase = get_supabase_client()
+if "supabase_client" not in st.session_state:
+    st.session_state.supabase_client = get_supabase_client()
+
+supabase = st.session_state.supabase_client
 
 if supabase is None:
     st.error(
