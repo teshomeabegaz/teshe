@@ -1,6 +1,6 @@
 
 import streamlit as st
-import pyodbc
+import sqlite3
 import pandas as pd
 
 st.set_page_config(
@@ -9,79 +9,53 @@ st.set_page_config(
     layout="wide"
 )
 
-# SQL Server connection settings
-SERVER = r"localhost"
-DATABASE = "HealthInformaticsPractice"
-DRIVER = "ODBC Driver 18 for SQL Server"
-
-CONNECTION_STRING = (
-    f"DRIVER={{{DRIVER}}};"
-    f"SERVER={SERVER};"
-    "DATABASE=master;"
-    "Trusted_Connection=yes;"
-    "TrustServerCertificate=yes;"
-)
+# Temporary database for fictional practice records
+DATABASE = "/tmp/health_informatics.db"
 
 
 def initialize_database():
-    # Create the practice database if necessary
-    with pyodbc.connect(
-        CONNECTION_STRING, autocommit=True
-    ) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            IF DB_ID(N'HealthInformaticsPractice') IS NULL
-                CREATE DATABASE HealthInformaticsPractice;
+    with sqlite3.connect(DATABASE) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS Patients (
+                PatientID INTEGER PRIMARY KEY AUTOINCREMENT,
+                FullName TEXT NOT NULL,
+                Age INTEGER NOT NULL,
+                Sex TEXT NOT NULL,
+                CreatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
         """)
-        cursor.close()
 
-    # Create the table in the practice database
-    with pyodbc.connect(
-        CONNECTION_STRING.replace(
-            "DATABASE=master;",
-            f"DATABASE={DATABASE};"
+
+def save_patient(full_name, age, sex):
+    with sqlite3.connect(DATABASE) as conn:
+        conn.execute(
+            """
+            INSERT INTO Patients (FullName, Age, Sex)
+            VALUES (?, ?, ?)
+            """,
+            (full_name, age, sex)
         )
-    ) as conn:
-        cursor = conn.cursor()
-        cursor.execute("""
-            IF OBJECT_ID(N'dbo.Patients', N'U') IS NULL
-            BEGIN
-                CREATE TABLE dbo.Patients (
-                    PatientID INT IDENTITY(1,1) PRIMARY KEY,
-                    FullName NVARCHAR(100) NOT NULL,
-                    Age INT NOT NULL,
-                    Sex NVARCHAR(10) NOT NULL,
-                    CreatedAt DATETIME2
-                        NOT NULL DEFAULT SYSDATETIME()
-                );
-            END
-        """)
-        conn.commit()
-        cursor.close()
 
 
-def get_connection():
-    return pyodbc.connect(
-        CONNECTION_STRING.replace(
-            "DATABASE=master;",
-            f"DATABASE={DATABASE};"
+def get_patients():
+    with sqlite3.connect(DATABASE) as conn:
+        return pd.read_sql_query(
+            """
+            SELECT PatientID, FullName, Age, Sex, CreatedAt
+            FROM Patients
+            ORDER BY PatientID DESC
+            """,
+            conn
         )
-    )
 
+
+initialize_database()
 
 st.title("🏥 Health Informatics System")
 st.write("Patient Registration and Database Management")
+st.caption("Practice application — use fictional data only.")
 st.divider()
 
-# Initialize database
-try:
-    initialize_database()
-    st.success("SQL Server connected successfully.")
-except Exception as e:
-    st.error(f"Database connection failed: {e}")
-    st.stop()
-
-# Two-column layout
 form_column, records_column = st.columns([1, 1.4])
 
 with form_column:
@@ -105,23 +79,11 @@ with form_column:
                 st.warning("Please enter a name.")
             else:
                 try:
-                    with get_connection() as conn:
-                        cursor = conn.cursor()
-                        cursor.execute(
-                            """
-                            INSERT INTO dbo.Patients
-                                (FullName, Age, Sex)
-                            VALUES (?, ?, ?)
-                            """,
-                            full_name.strip(),
-                            int(age),
-                            sex
-                        )
-                        conn.commit()
-
-                    st.success("Record saved to SQL Server!")
+                    save_patient(
+                        full_name.strip(), int(age), sex
+                    )
+                    st.success("Practice record saved!")
                     st.rerun()
-
                 except Exception as e:
                     st.error(f"Could not save record: {e}")
 
@@ -129,20 +91,8 @@ with records_column:
     st.subheader("Saved Records")
 
     try:
-        with get_connection() as conn:
-            df = pd.read_sql_query(
-                """
-                SELECT PatientID, FullName, Age, Sex, CreatedAt
-                FROM dbo.Patients
-                ORDER BY PatientID DESC
-                """,
-                conn
-            )
-
+        df = get_patients()
         st.metric("Total records", len(df))
         st.dataframe(df, use_container_width=True)
-
     except Exception as e:
         st.error(f"Could not load records: {e}")
-
-st.caption("Practice application — use fictional data only.")
