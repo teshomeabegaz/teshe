@@ -257,14 +257,17 @@ def show_file_upload(key):
 # 4. APPLICATION TABS
 # --------------------------------------------------
 
-tab1, tab2, tab3, tab4 = st.tabs(
+
+tab1, tab2, tab3, tab4, tab5 = st.tabs(
     [
         "📊 Dashboard",
         "📁 Analyze Dataset",
         "🧮 Python Statistics",
         "📈 Statistical Tests",
+        "📝 Data Collection Forms",
     ]
 )
+
 
 
 # --------------------------------------------------
