@@ -163,58 +163,6 @@ st.info(
 
 
 # --------------------------------------------------
-# 2. DATABASE FUNCTIONS
-# --------------------------------------------------
-
-DB_PATH = "/tmp/health_informatics.db"
-
-
-def initialize_database():
-    """Create the local practice database if it does not exist."""
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS patients (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                study_id TEXT NOT NULL,
-                age INTEGER,
-                sex TEXT,
-                diagnosis TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            """
-        )
-
-
-def get_patients():
-    """Retrieve fictional practice records."""
-    with sqlite3.connect(DB_PATH) as conn:
-        return pd.read_sql_query(
-            """
-            SELECT id, study_id, age, sex, diagnosis, created_at
-            FROM patients
-            ORDER BY id DESC
-            """,
-            conn,
-        )
-
-
-def save_patient(study_id, age, sex, diagnosis):
-    """Save a practice record."""
-    with sqlite3.connect(DB_PATH) as conn:
-        conn.execute(
-            """
-            INSERT INTO patients (study_id, age, sex, diagnosis)
-            VALUES (?, ?, ?, ?)
-            """,
-            (study_id, age, sex, diagnosis),
-        )
-
-
-initialize_database()
-
-
-# --------------------------------------------------
 # 3. HELPER FUNCTIONS
 # --------------------------------------------------
 
