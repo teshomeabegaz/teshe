@@ -1391,6 +1391,251 @@ with tab4:
 
 
 # --------------------------------------------------
+# TAB 5: DATA COLLECTION FORMS
+# --------------------------------------------------
+
+with tab5:
+    st.header("Data Collection Forms")
+
+    st.write(
+        "Create your own questionnaires and manage your forms. "
+        "Forms are associated with your signed-in account."
+    )
+
+    current_user_id = st.session_state.user.id
+
+    create_tab, manage_tab = st.tabs(
+        ["Create a Form", "My Forms"]
+    )
+
+    with create_tab:
+        st.subheader("Create a New Questionnaire")
+
+        with st.form("create_custom_form"):
+            form_title = st.text_input(
+                "Form title",
+                placeholder="Example: Health Survey",
+            )
+
+            form_description = st.text_area(
+                "Form description",
+                placeholder="Describe the purpose of this survey",
+            )
+
+            question_count = st.number_input(
+                "Number of questions",
+                min_value=1,
+                max_value=30,
+                value=3,
+                step=1,
+            )
+
+            questions = []
+
+            for i in range(int(question_count)):
+                st.markdown(f"**Question {i + 1}**")
+
+                label = st.text_input(
+                    "Question text",
+                    key=f"form_question_label_{i}",
+                )
+
+                field_type = st.selectbox(
+                    "Question type",
+                    [
+                        "text",
+                        "textarea",
+                        "number",
+                        "date",
+                        "dropdown",
+                        "radio",
+                        "checkbox",
+                        "yes_no",
+                    ],
+                    format_func=lambda x: {
+                        "text": "Short text",
+                        "textarea": "Long text",
+                        "number": "Number",
+                        "date": "Date",
+                        "dropdown": "Dropdown menu",
+                        "radio": "Radio buttons",
+                        "checkbox": "Checkbox choices",
+                        "yes_no": "Yes / No",
+                    }[x],
+                    key=f"form_question_type_{i}",
+                )
+
+                required = st.checkbox(
+                    "Required question",
+                    key=f"form_question_required_{i}",
+                )
+
+                options_text = ""
+
+                if field_type in ["dropdown", "radio", "checkbox"]:
+                    options_text = st.text_input(
+                        "Options (separate with commas)",
+                        placeholder="Example: Yes, No, Not sure",
+                        key=f"form_question_options_{i}",
+                    )
+
+                questions.append(
+                    {
+                        "label": label.strip(),
+                        "field_type": field_type,
+                        "required": required,
+                        "options_text": options_text,
+                    }
+                )
+
+                st.divider()
+
+            create_clicked = st.form_submit_button(
+                "Create Form",
+                type="primary",
+            )
+
+        if create_clicked:
+            if not form_title.strip():
+                st.error("Please enter a form title.")
+
+            elif any(not q["label"] for q in questions):
+                st.error("Please enter text for every question.")
+
+            elif any(
+                q["field_type"] in ["dropdown", "radio", "checkbox"]
+                and len([
+                    option.strip()
+                    for option in q["options_text"].split(",")
+                    if option.strip()
+                ]) < 2
+                for q in questions
+            ):
+                st.error(
+                    "Dropdown, radio, and checkbox questions "
+                    "need at least two options."
+                )
+
+            else:
+                try:
+                    form_result = (
+                        supabase.table("forms")
+                        .insert(
+                            {
+                                "owner_id": current_user_id,
+                                "title": form_title.strip(),
+                                "description": form_description.strip(),
+                                "is_published": False,
+                            }
+                        )
+                        .execute()
+                    )
+
+                    if not form_result.data:
+                        st.error("The form could not be saved.")
+                    else:
+                        new_form_id = form_result.data[0]["id"]
+
+                        field_rows = []
+
+                        for position, question in enumerate(questions):
+                            options = None
+
+                            if question["field_type"] in [
+                                "dropdown", "radio", "checkbox"
+                            ]:
+                                options = [
+                                    option.strip()
+                                    for option in question["options_text"].split(",")
+                                    if option.strip()
+                                ]
+
+                            field_rows.append(
+                                {
+                                    "form_id": new_form_id,
+                                    "label": question["label"],
+                                    "field_type": question["field_type"],
+                                    "options": options,
+                                    "required": question["required"],
+                                    "position": position,
+                                }
+                            )
+
+                        (
+                            supabase.table("form_fields")
+                            .insert(field_rows)
+                            .execute()
+                        )
+
+                        st.success(
+                            "Form created successfully! "
+                            "It is saved as a draft."
+                        )
+                        st.rerun()
+
+                except Exception as error:
+                    st.error(
+                        "Could not save the form. Check the "
+                        "Supabase table structure and access policies. "
+                        f"Details: {error}"
+                    )
+
+    with manage_tab:
+        st.subheader("My Forms")
+
+        try:
+            forms_result = (
+                supabase.table("forms")
+                .select("*")
+                .eq("owner_id", current_user_id)
+                .order("created_at", desc=True)
+                .execute()
+            )
+
+            my_forms = forms_result.data or []
+
+            if not my_forms:
+                st.info(
+                    "You have not created any forms yet. "
+                    "Use the Create a Form tab to begin."
+                )
+            else:
+                for form_item in my_forms:
+                    with st.expander(form_item["title"]):
+                        st.write(
+                            form_item.get("description") or
+                            "No description provided."
+                        )
+
+                        st.write(
+                            "Status:",
+                            "Published"
+                            if form_item.get("is_published")
+                            else "Draft",
+                        )
+
+                        fields_result = (
+                            supabase.table("form_fields")
+                            .select("*")
+                            .eq("form_id", form_item["id"])
+                            .order("position")
+                            .execute()
+                        )
+
+                        for field in fields_result.data or []:
+                            st.write(
+                                f'{field["position"] + 1}. '
+                                f'{field["label"]} '
+                                f'({field["field_type"]})'
+                            )
+
+        except Exception as error:
+            st.error(
+                "Could not load your forms. Check the Supabase "
+                f"permissions and database tables. Details: {error}"
+            )
+
+# --------------------------------------------------
 # 5. FOOTER
 # --------------------------------------------------
 
